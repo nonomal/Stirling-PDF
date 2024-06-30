@@ -27,7 +27,9 @@ import io.github.pixee.security.Filenames;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
+import stirling.software.SPDF.model.PdfMetadata;
 import stirling.software.SPDF.model.api.PDFWithPageNums;
+import stirling.software.SPDF.utils.PdfUtils;
 import stirling.software.SPDF.utils.WebResponseUtils;
 
 @RestController
@@ -49,6 +51,7 @@ public class SplitPDFController {
         // open the pdf document
 
         PDDocument document = Loader.loadPDF(file.getBytes());
+        PdfMetadata metadata = PdfUtils.extractMetadataFromPdf(document);
         int totalPages = document.getNumberOfPages();
         List<Integer> pageNumbers = request.getPageNumbersList(document, false);
         System.out.println(
@@ -74,6 +77,9 @@ public class SplitPDFController {
                     logger.info("Adding page {} to split document", i);
                 }
                 previousPageNumber = splitPoint + 1;
+
+                // Transfer metadata to split pdf
+                PdfUtils.setMetadataToPdf(splitDocument, metadata);
 
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 splitDocument.save(baos);
@@ -115,7 +121,7 @@ public class SplitPDFController {
 
         logger.info("Successfully created zip file with split documents: {}", zipFile.toString());
         byte[] data = Files.readAllBytes(zipFile);
-        Files.delete(zipFile);
+        Files.deleteIfExists(zipFile);
 
         // return the Resource in the response
         return WebResponseUtils.bytesToWebResponse(
